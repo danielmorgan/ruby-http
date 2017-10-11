@@ -9,7 +9,31 @@ def main
     socket.listen(1)
     conn_sock, addr_info = socket.accept
     conn = Connection.new(conn_sock)
-    p read_request(conn)
+    respond(conn_sock, 404, "Hello world")
+end
+
+def read_request(conn)
+    request_line = conn.read_line
+    method, path, version = request_line.split(" ", 3)
+    headers = {}
+    loop do
+        line = conn.read_line
+        break if line.empty?
+        key, value = line.split(/:\s*/, 2)
+        headers[key] = value
+    end
+    Request.new(method, path, headers)
+end
+
+def respond(conn_sock, status_code, content)
+    status_text = {
+        200 => "OK",
+        404 => "Not Found",
+    }.fetch(status_code)
+    conn_sock.send("HTTP/1.1 #{status_code} #{status_text}\r\n", 0)
+    conn_sock.send("Content-Length: #{content.length}\r\n", 0)
+    conn_sock.send("\r\n", 0)
+    conn_sock.send(content, 0)
 end
 
 class Connection
@@ -29,19 +53,6 @@ class Connection
         result, @buffer = @buffer.split(string, 2)
         result
     end
-end
-
-def read_request(conn)
-    request_line = conn.read_line
-    method, path, version = request_line.split(" ", 3)
-    headers = {}
-    loop do
-        line = conn.read_line
-        break if line.empty?
-        key, value = line.split(/:\s*/, 2)
-        headers[key] = value
-    end
-    Request.new(method, path, headers)
 end
 
 Request = Struct.new(:method, :path, :headers)
