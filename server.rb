@@ -9,7 +9,8 @@ def main
     socket.listen(1)
     conn_sock, addr_info = socket.accept
     conn = Connection.new(conn_sock)
-    respond(conn_sock, 404, "Hello world")
+    request = read_request(conn)
+    respond_for_request(conn_sock, request)
 end
 
 def read_request(conn)
@@ -34,6 +35,17 @@ def respond(conn_sock, status_code, content)
     conn_sock.send("Content-Length: #{content.length}\r\n", 0)
     conn_sock.send("\r\n", 0)
     conn_sock.send(content, 0)
+end
+
+def respond_for_request(conn_sock, request)
+    path = Dir.getwd + request.path
+    content = ""
+    status_code = 404
+    if File.exists?(path)
+        content = File.read(path)
+        status_code = 200
+    end
+    respond(conn_sock, status_code, content)
 end
 
 class Connection
